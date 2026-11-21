@@ -95,3 +95,92 @@ to explicitly illustrative bounds. `sysml/HumanoidLocomotion.sysml` describes
 the larger system and the ordering of its responsibilities. Neither artifact
 is a balance controller or a hardware driver, and the sample values are not
 validated limits for any real robot.
+
+## How the code works
+
+The C++ sample separates the reusable data and logic from `main()`:
+
+- `VelocityCommand` represents the body-relative request:
+  `vx_mps`, `vy_mps`, and `wz_radps`.
+- `VelocityLimits` represents the demonstration limits for the corresponding
+  axes.
+- `limit_command()` clamps each component independently with `std::clamp`.
+- `main()` provides one requested command that exceeds at least one bound,
+  prints the request and the limited result, and verifies the result.
+
+The independent clamping rule is important. A command of
+`(vx=0.45, vy=0.10, wz=0.75)` becomes
+`(vx=0.30, vy=0.10, wz=0.60)` using the sample limits
+`(0.30, 0.20, 0.60)`. The lateral request remains unchanged because it is
+already within its bound.
+
+This is not a complete gait controller. It can be used as a first software
+boundary at the edge of a real locomotion subsystem, before sending velocity
+requests to a planner or gait generator. In an application, replace the
+sample constants with validated robot-specific configuration loaded from a
+typed, versioned configuration source. Apply a separate acceleration or jerk
+limit before the command reaches planning, and propagate limit or confidence
+information so the rest of the system can react consistently.
+
+### Integration pattern
+
+The intended lifecycle in a robot is:
+
+```text
+Navigation or operator command
+  -> velocity command
+  -> command and acceleration limiter
+  -> state estimator
+  -> footstep and swing-trajectory planner
+  -> inverse kinematics
+  -> whole-body/balance controller
+  -> joint impedance controller
+  -> safety limiter and watchdog
+  -> simulator or motor interface
+  <- sensors and estimated state
+```
+
+A ROS 2 integration should cross this boundary with a typed message and a
+rate-limited node. The limiter should be checked in the control domain rather
+than inside only the visualization or navigation layer. Its output should be
+timestamped, and stale commands should expire. The status of any limiter,
+sensor, estimator, or safety gate should be published as diagnostics.
+
+The C++ output can be tested with unit tests and in a physics simulator.
+Before physical motion, independent safety tests should verify forward,
+backward, lateral, turning, start, stop, disturbance, sensor-loss, watchdog,
+and emergency-stop behavior. Hardware limits and stability thresholds must
+come from the robot model and commissioning results, not from this example.
+
+## How to add locomotion capabilities
+
+1. **Stable standing:** Add a neutral stand pose, IMU-assisted posture control,
+   foot-force or pressure sensing, and controlled stop/recovery behavior.
+2. **Forward and backward walking:** Start from a bounded velocity command,
+   plan alternating support phases, and validate foot placement and balance.
+3. **Side-stepping and turning:** Add separate lateral and yaw planning.
+   Do not couple them to a single forward-speed assumption.
+4. **Curved and diagonal motion:** Combine bounded `vx`, `vy`, and `wz`; verify
+   footprint, leg reach, and friction across the complete support phase.
+5. **Terrain adaptation:** Add surface-height and surface-normal estimates,
+   conservative gait selection, and landing-height adaptation.
+6. **Disturbance recovery:** Check COM/CoP/ZMP support margin and trigger
+   a compliant, verified recovery step or protective stop.
+7. **Long-duration operation:** Add thermal, battery, communication, timing,
+   fault, and logging constraints to the safety limiter.
+
+## Safety and validation
+
+No software value in this repository certifies a real actuator, floor, or
+robot. The educational limits demonstrate clamping; they do not imply torque,
+geometry, friction, or stability margins.
+
+Minimum validation for a study platform includes:
+
+- deterministic unit tests for positive and negative velocity bounds;
+- acceleration and stale-command tests;
+- simulation of standing, walking, turning, stopping, and recovery;
+- IMU and force-sensor dropout tests;
+- actuator torque, position, velocity, and thermal boundaries;
+- communication watchdog and independent emergency stop;
+- harnessed physical testing only after independent review and commissioning.

@@ -1,0 +1,83 @@
+@startuml
+title Humanoid Locomotion C++ - UML Architecture
+skinparam classAttributeIconSize 0
+
+enum GaitMode {
+  STAND
+  WALK
+  TURN
+  RECOVER
+  STOP
+}
+
+class VelocityCommand {
+  + vx_mps: double
+  + vy_mps: double
+  + wz_radps: double
+}
+
+class VelocityLimits {
+  + forward_mps: double
+  + lateral_mps: double
+  + yaw_radps: double
+}
+
+class CommandLimiter {
+  + limit_command(command, limits): VelocityCommand
+}
+
+class StateEstimator
+class FootstepPlanner
+class SwingFootTrajectoryGenerator
+class InverseKinematicsSolver
+class BalanceAndWholeBodyController
+class JointImpedanceController
+class SafetyLimiter
+class RobotInterface
+
+class HumanoidLocomotionSystem {
+  - gaitMode: GaitMode
+  + execute(desired: VelocityCommand): void
+}
+
+HumanoidLocomotionSystem *-- CommandLimiter
+HumanoidLocomotionSystem *-- StateEstimator
+HumanoidLocomotionSystem *-- FootstepPlanner
+HumanoidLocomotionSystem *-- SwingFootTrajectoryGenerator
+HumanoidLocomotionSystem *-- InverseKinematicsSolver
+HumanoidLocomotionSystem *-- BalanceAndWholeBodyController
+HumanoidLocomotionSystem *-- JointImpedanceController
+HumanoidLocomotionSystem *-- SafetyLimiter
+HumanoidLocomotionSystem *-- RobotInterface
+HumanoidLocomotionSystem --> GaitMode
+HumanoidLocomotionSystem --> VelocityCommand
+CommandLimiter ..> VelocityLimits
+
+note bottom of CommandLimiter
+  The repository's executable implements
+  std::clamp for vx, vy, and wz.
+  It does not implement a gait or hardware driver.
+end note
+
+package "Locomotion Control Cycle" {
+  state "Limit velocity" as limit
+  state "Estimate state" as estimate
+  state "Plan footsteps" as footsteps
+  state "Generate swing trajectory" as swing
+  state "Solve inverse kinematics" as ik
+  state "Stabilize whole body" as balance
+  state "Calculate joint commands" as joints
+  state "Enforce safety" as safety
+  state "Send to interface" as interface
+
+  limit --> estimate
+  estimate --> footsteps
+  footsteps --> swing
+  swing --> ik
+  ik --> balance
+  balance --> joints
+  joints --> safety
+  safety --> interface
+  interface --> estimate
+}
+@enduml

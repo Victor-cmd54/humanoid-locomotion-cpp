@@ -10,9 +10,15 @@ safety-certified.
 - `src/main.cpp` — small velocity-command limiter example.
 - `sysml/HumanoidLocomotion.sysml` — SysML v2 textual model of the locomotion
   subsystem, its responsibilities, and its control-cycle order.
+- `uml/HumanoidLocomotion.puml` — UML class and activity view of the same
+  system architecture.
+- `uml/HumanoidLocomotion.svg` — rendered architecture diagram for direct
+  viewing and Word/document embedding.
 - `docs/locomotion-concepts.md` — an explanation of the locomotion topic,
   adapted from the corresponding section of the supplied robotics learning
   document.
+- `docs/references.md` — source document section map and external reference
+  material for balance control, bipedal walking, ROS 2, and safety.
 
 The model and guide cover body-relative velocity commands (`vx`, `vy`, `wz`),
 command limiting, state estimation, footstep planning, swing-foot
