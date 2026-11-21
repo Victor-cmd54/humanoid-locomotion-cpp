@@ -10,8 +10,9 @@ safety-certified.
 - `src/main.cpp` — small velocity-command limiter example.
 - `sysml/HumanoidLocomotion.sysml` — SysML v2 textual model of the locomotion
   subsystem, its responsibilities, and its control-cycle order.
-- `uml/HumanoidLocomotion.puml` — UML class and activity view of the same
-  system architecture.
+- `uml/HumanoidLocomotion.puml` — updated UML class and control-flow model for
+  the Section 1.4 velocity interface, standing, CoP/ZMP, LIPM, gait, and
+  safety stages.
 - `uml/HumanoidLocomotion.svg` — rendered architecture diagram for direct
   viewing and Word/document embedding.
 - `docs/locomotion-concepts.md` — an explanation of the locomotion topic,

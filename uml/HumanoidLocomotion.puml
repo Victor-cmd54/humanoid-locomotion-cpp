@@ -4,10 +4,18 @@ skinparam classAttributeIconSize 0
 
 enum GaitMode {
   STAND
+  START
   WALK
+  SIDE_STEP
+  DIAGONAL
   TURN
+  CURVED_PATH
   RECOVER
   STOP
+  SLOPE
+  STAIRS
+  UNEVEN
+  LOW_FRICTION
 }
 
 class VelocityCommand {
@@ -26,6 +34,47 @@ class CommandLimiter {
   + limit_command(command, limits): VelocityCommand
 }
 
+class StandTarget {
+  + pelvisHeight_m: double
+  + hipPitch_rad: double
+  + kneePitch_rad: double
+  + anklePitch_rad: double
+}
+
+class ImuMeasurement {
+  + roll_rad: double
+  + pitch_rad: double
+  + rollRate_radps: double
+  + pitchRate_radps: double
+}
+
+class PressurePoint {
+  + x_m: double
+  + y_m: double
+  + forceZ_N: double
+}
+
+class CenterOfPressure {
+  + x_m: double
+  + y_m: double
+  + totalForceZ_N: double
+  + calculate(points): CenterOfPressure
+}
+
+class ZmpCoPAnalyzer {
+  + isInsideSupportPolygon(x, y): bool
+  + calculateCop(points): CenterOfPressure
+}
+
+class LipmPlanner {
+  + calculateZmp(comX, comAX, comHeight): double
+  + calculateCapturePoint(comX, comVX, comHeight): double
+}
+
+class NeutralStandingController
+class ImuStandingController
+class WeightShiftController
+class DisturbanceRecoveryController
 class StateEstimator
 class FootstepPlanner
 class SwingFootTrajectoryGenerator
@@ -41,6 +90,12 @@ class HumanoidLocomotionSystem {
 }
 
 HumanoidLocomotionSystem *-- CommandLimiter
+HumanoidLocomotionSystem *-- NeutralStandingController
+HumanoidLocomotionSystem *-- ImuStandingController
+HumanoidLocomotionSystem *-- WeightShiftController
+HumanoidLocomotionSystem *-- DisturbanceRecoveryController
+HumanoidLocomotionSystem *-- ZmpCoPAnalyzer
+HumanoidLocomotionSystem *-- LipmPlanner
 HumanoidLocomotionSystem *-- StateEstimator
 HumanoidLocomotionSystem *-- FootstepPlanner
 HumanoidLocomotionSystem *-- SwingFootTrajectoryGenerator
@@ -52,6 +107,10 @@ HumanoidLocomotionSystem *-- RobotInterface
 HumanoidLocomotionSystem --> GaitMode
 HumanoidLocomotionSystem --> VelocityCommand
 CommandLimiter ..> VelocityLimits
+CenterOfPressure --> PressurePoint
+ZmpCoPAnalyzer ..> CenterOfPressure
+NeutralStandingController ..> StandTarget
+ImuStandingController ..> ImuMeasurement
 
 note bottom of CommandLimiter
   The repository's executable implements
@@ -61,6 +120,12 @@ end note
 
 package "Locomotion Control Cycle" {
   state "Limit velocity" as limit
+  state "Verify balance and perception" as verify
+  state "Enter or maintain standing" as stand
+  state "Correct IMU posture" as imu
+  state "Calculate CoP" as cop
+  state "Transfer weight / verify support" as weight
+  state "Evaluate ZMP / LIPM" as zmp
   state "Estimate state" as estimate
   state "Plan footsteps" as footsteps
   state "Generate swing trajectory" as swing
@@ -71,6 +136,13 @@ package "Locomotion Control Cycle" {
   state "Send to interface" as interface
 
   limit --> estimate
+  limit --> verify
+  verify --> stand
+  stand --> imu
+  imu --> cop
+  cop --> weight
+  weight --> zmp
+  zmp --> estimate
   estimate --> footsteps
   footsteps --> swing
   swing --> ik
